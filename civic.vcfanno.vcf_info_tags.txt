@@ -1,0 +1,2 @@
+##SOURCE_CIVIC=2016_09_17
+##INFO=<ID=CIVIC_ID,Number=.,Type=String,Description="Region identifier for variants found in CiVIC">
