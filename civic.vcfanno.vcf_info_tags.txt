@@ -1,3 +1,3 @@
-##SOURCE_CIVIC=2016_10_13
+##SOURCE_CIVIC=2016_11_12
 ##INFO=<ID=CIVIC_ID,Number=.,Type=String,Description="Identifier for variant biomarker found in CiVIC (Allele-specific match)">
 ##INFO=<ID=CIVIC_ID_2,Number=.,Type=String,Description="Identifier for variant biomarker found in in CiVIC (Approximate variant match)">

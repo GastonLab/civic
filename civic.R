@@ -148,11 +148,16 @@ protein_variants$id <- stringr::str_replace(protein_variants$id,"INS","ins")
 protein_variants <- dplyr::rename(protein_variants, transvar_id = id)
 civic_all_mut_cna_exp <- dplyr::left_join(civic_all_mut_cna_exp,protein_variants)
 transvar_df <- data.frame('id' = protein_variants$transvar_id)
-write.table(transvar_df, file="civic.transvar.input.v3.tsv",sep="\t",quote=F,col.names = F,row.names = F)
+write.table(transvar_df, file="civic.transvar.input.v4.tsv",sep="\t",quote=F,col.names = F,row.names = F)
+
+## MAP USING TRANSVAR
+##docker run -ti --rm -v=/Users/sigven/research/OncoVarExplorer/dev:/data -v=/Users/sigven/research/OncoVarExplorer/dev/data/civic:/workdir -w=/workdir sigven/oncovar_explorer:latest
+##transvar config --download_anno --refversion hg19
+##transvar panno --gencode -l civic.transvar.input.v4.tsv --reference /data/data/hg19/ucsc.hg19.fa --refversion hg19 > civic.transvar.output.v4.tsv
 
 ## RUN TRANSVAR IN VCFANNO DOCKER, PARSE OUTPUT HERE
 
-transvar_output_df <- as.data.frame(readr::read_tsv(file="civic.transvar.output.v3.tsv",col_names = F))
+transvar_output_df <- as.data.frame(readr::read_tsv(file="civic.transvar.output.v4.tsv",col_names = F))
 transvar_output <- as.data.frame(stringr::str_split_fixed(transvar_output_df$X5,"/",n = 3))
 transvar_output$V4 <- transvar_output_df$X1
 transvar_output$V5 <- stringr::str_replace(transvar_output_df$X2," \\(protein_coding\\)","")
@@ -325,7 +330,7 @@ write.table(civic_bed_mapped_sorted,file="civic.bed",sep="\t",row.names=F,quote=
 #tabix -p bed civic.bed.gz
 
 header_lines <- c("##fileformat=VCFv4.2","##SOURCE_CIVIC=2016_10_19","##INFO=<ID=CIVIC_ID,Number=.,Type=String,Description=\"Identifier for evidence item of clinical biomarker in CiVIC database\">","#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO")
-write(header_lines,file="civic.vcf",sep="\n")
+write(header_lines,file="civic.v3.vcf",sep="\n")
 
 civic_vcf_mapped$CIVIC_ID <- paste0('CIVIC_ID=',civic_vcf_mapped$CIVIC_ID)
 civic_vcf_mapped$QUAL <- '.'
@@ -337,8 +342,8 @@ civic_vcf_mapped <- civic_vcf_mapped[,c("CHROM","POS","ID","REF","ALT","QUAL","F
 
 write.table(civic_vcf_mapped, file="civic_vcfcontent.tsv",sep="\t",col.names = F,quote=F, row.names = F)
 
-system("cat civic_vcfcontent.tsv | tail -n +2 | egrep -v \"^[XYM]\" | sort -k1,1n -k2,2n -k4,4 -k5,5 >> civic.vcf")
-system("cat civic_vcfcontent.tsv | tail -n +2 | egrep \"^[XYM]\" | sort -k1,1n -k2,2n -k4,4 -k5,5 >> civic.vcf")
-system("bgzip -c civic.v2.vcf > civic.vcf.gz")
-system("tabix -p vcf civic.vcf.gz")
+system("cat civic_vcfcontent.tsv | tail -n +2 | egrep -v \"^[XYM]\" | sort -k1,1n -k2,2n -k4,4 -k5,5 >> civic.v3.vcf")
+system("cat civic_vcfcontent.tsv | tail -n +2 | egrep \"^[XYM]\" | sort -k1,1n -k2,2n -k4,4 -k5,5 >> civic.v3.vcf")
+system("bgzip -c civic.v3.vcf > civic.v3.vcf.gz")
+system("tabix -p vcf civic.v3.vcf.gz")
 
