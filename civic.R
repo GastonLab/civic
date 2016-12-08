@@ -113,21 +113,21 @@ for(i in 1:nrow(civic_variant_names)){
 
 
 all_civic[!is.na(all_civic$variant_origin) & all_civic$variant_origin == "N/A",]$variant_origin <- NA
-all_civic[!is.na(all_civic$clinical_significance) & all_civic$clinical_significance == "NA",]$clinical_significance <- NA
+all_civic[!is.na(all_civic$clinical_significance) & all_civic$clinical_significance == "N/A",]$clinical_significance <- NA
 
 all_civic[!is.na(all_civic$altbase) & all_civic$altbase == "",]$altbase <- NA
 all_civic[!is.na(all_civic$refbase) & all_civic$refbase == "",]$refbase <- NA
-all_civic[!is.na(all_civic$chr_start) & all_civic$chr_start == "",]$chr_start <- NA
-all_civic[!is.na(all_civic$chr_stop) & all_civic$chr_stop == "",]$chr_start <- NA
+#all_civic[!is.na(all_civic$chr_start) & (all_civic$chr_start == "" || all_civic$chr_start == 'NA'),]$chr_start <- NA
+#all_civic[!is.na(all_civic$chr_stop) & (all_civic$chr_stop == "" || all_civic$chr_stop == 'NA'),]$chr_start <- NA
 
 all_civic[all_civic$drug_names == "",]$drug_names <- NA
-all_civic[!is.na(all_civic$clinical_significance) & all_civic$clinical_significance == "N/A",]$clinical_significance <- NA
+#all_civic[!is.na(all_civic$clinical_significance) & all_civic$clinical_significance == "N/A",]$clinical_significance <- NA
 
 all_civic$evidence_description <- stringr::str_replace_all(all_civic$evidence_description,"\\\n","")
 
-save(all_civic,file="all_civic.rda")
+save(all_civic,file="all_civic.update.rda")
 
-load(file="all_civic.rda")
+load(file="all_civic.update.rda")
 civic_all_mut_cna_exp <- all_civic %>% dplyr::select(genesymbol,entrezgene,variant_name,variant_description,evidence_type,evidence_direction,evidence_level,evidence_description,clinical_significance,variant_origin,pubmed_id,pubmed_html_link,disease_url,disease_ontology_id,disease_name,drug_names,rating,drug_interaction_type,variant_groups,api_url,chromosome,chr_start,chr_stop,refbase,altbase) %>% dplyr::distinct() %>% dplyr::filter(!stringr::str_detect(variant_name,"PHOSPHORYLATION|MISLOCALIZATION|POLYMORPHISM|REARRANGEMENT|DUPLICATION|TRANSLOCATION|FUSION|HYPERMETHYLATION|METHYLATION|SERUM|LOH|Polymorphism|N-TERMINAL"))
 
 civic_all_mut_cna_exp$variant_name <- stringr::str_trim(civic_all_mut_cna_exp$variant_name,side="both")
@@ -138,26 +138,29 @@ civic_all_mut_cna_exp$alteration_type <- 'MUT'
 civic_all_mut_cna_exp[stringr::str_detect(civic_all_mut_cna_exp$variant_name,"EXPRESSION"),]$alteration_type <- 'EXP'
 civic_all_mut_cna_exp[stringr::str_detect(civic_all_mut_cna_exp$variant_name,"AMPLIFICATION|LOSS|COPY"),]$alteration_type <- 'CNA'
 civic_all_mut_cna_exp$civic_id <- paste0('CIVIC_',rep(1:nrow(civic_all_mut_cna_exp)))
+civic_all_mut_cna_exp[stringr::str_detect(civic_all_mut_cna_exp$variant_name,"^[A-Z]{1}[0-9]{1,}[a-zA-Z]{0,}(\\*[0-9]{0,}){0,}$"),]$variant_name <- stringr::str_replace(civic_all_mut_cna_exp[stringr::str_detect(civic_all_mut_cna_exp$variant_name,"^[A-Z]{1}[0-9]{1,}[a-zA-Z]{0,}(\\*[0-9]{0,}){0,}$"),]$variant_name,"DEL","del")
+civic_all_mut_cna_exp[stringr::str_detect(civic_all_mut_cna_exp$variant_name,"^[A-Z]{1}[0-9]{1,}[a-zA-Z]{0,}(\\*[0-9]{0,}){0,}$"),]$variant_name <- stringr::str_replace(civic_all_mut_cna_exp[stringr::str_detect(civic_all_mut_cna_exp$variant_name,"^[A-Z]{1}[0-9]{1,}[a-zA-Z]{0,}(\\*[0-9]{0,}){0,}$"),]$variant_name,"INS","ins")
+civic_all_mut_cna_exp[stringr::str_detect(civic_all_mut_cna_exp$variant_name,"^[A-Z]{1}[0-9]{1,}[a-zA-Z]{0,}(\\*[0-9]{0,}){0,}$"),]$variant_name <- stringr::str_replace(civic_all_mut_cna_exp[stringr::str_detect(civic_all_mut_cna_exp$variant_name,"^[A-Z]{1}[0-9]{1,}[a-zA-Z]{0,}(\\*[0-9]{0,}){0,}$"),]$variant_name,"FS","fs")
 
 ## PREPARE INPUT FOR TRANSVAR - PROTEIN TO GENOME MAPPING TOOL
 protein_variants <- civic_all_mut_cna_exp[stringr::str_detect(civic_all_mut_cna_exp$variant_name,"^[A-Z]{1}[0-9]{1,}[a-zA-Z]{0,}(\\*[0-9]{0,}){0,}$"),] %>% dplyr::select(genesymbol,variant_name) %>% dplyr::distinct()
+protein_variants$variant_name <- stringr::str_replace(protein_variants$variant_name,"FS","fs")
 protein_variants$id <- paste(protein_variants$genesymbol,paste0('p.',protein_variants$variant_name),sep=":")
-protein_variants$id <- stringr::str_replace(protein_variants$id,"FS$","fs")
 protein_variants$id <- stringr::str_replace(protein_variants$id,"DEL","del")
 protein_variants$id <- stringr::str_replace(protein_variants$id,"INS","ins")
 protein_variants <- dplyr::rename(protein_variants, transvar_id = id)
 civic_all_mut_cna_exp <- dplyr::left_join(civic_all_mut_cna_exp,protein_variants)
 transvar_df <- data.frame('id' = protein_variants$transvar_id)
-write.table(transvar_df, file="civic.transvar.input.v4.tsv",sep="\t",quote=F,col.names = F,row.names = F)
+write.table(transvar_df, file="civic.transvar.input.v3.tsv",sep="\t",quote=F,col.names = F,row.names = F)
 
 ## MAP USING TRANSVAR
 ##docker run -ti --rm -v=/Users/sigven/research/OncoVarExplorer/dev:/data -v=/Users/sigven/research/OncoVarExplorer/dev/data/civic:/workdir -w=/workdir sigven/oncovar_explorer:latest
 ##transvar config --download_anno --refversion hg19
-##transvar panno --gencode -l civic.transvar.input.v4.tsv --reference /data/data/hg19/ucsc.hg19.fa --refversion hg19 > civic.transvar.output.v4.tsv
+##transvar panno --gencode -l civic.transvar.input.v3.tsv --reference /data/data/hg19/ucsc.hg19.fa --refversion hg19 > civic.transvar.output.v3.tsv
 
 ## RUN TRANSVAR IN VCFANNO DOCKER, PARSE OUTPUT HERE
 
-transvar_output_df <- as.data.frame(readr::read_tsv(file="civic.transvar.output.v4.tsv",col_names = F))
+transvar_output_df <- as.data.frame(readr::read_tsv(file="civic.transvar.output.v3.tsv",col_names = F))
 transvar_output <- as.data.frame(stringr::str_split_fixed(transvar_output_df$X5,"/",n = 3))
 transvar_output$V4 <- transvar_output_df$X1
 transvar_output$V5 <- stringr::str_replace(transvar_output_df$X2," \\(protein_coding\\)","")
@@ -306,7 +309,7 @@ civic_biomarkers_all <- rbind(civic_biomarkers,civic_biomarkers_rest)
 #civic_all_mut_cna_exp$chr_start <- as.numeric(civic_all_mut_cna_exp$chr_start)
 #civic_all_mut_cna_exp$chr_start <- civic_all_mut_cna_exp$chr_start - 1
 #civic_all_mut_cna_exp$region_identifier <- paste("CIVIC",civic_all_mut_cna_exp$chromosome,civic_all_mut_cna_exp$chr_start,civic_all_mut_cna_exp$chr_stop,sep="_")
-write.table(civic_biomarkers_all,file="civic.biomarkers.tsv",sep="\t",row.names=F,quote=F,col.names=T)
+write.table(civic_biomarkers_all,file="civic.biomarkers.v3.tsv",sep="\t",row.names=F,quote=F,col.names=T)
 
 chrOrder <- c(as.character(c(1:22)),"X","Y")
 civic_bed_mapped$chromosome <- factor(civic_bed_mapped$chromosome, levels=chrOrder)
@@ -324,12 +327,12 @@ for(chrom in chrOrder){
   cat(chrom,'\n')
 }
 
-write.table(civic_bed_mapped_sorted,file="civic.bed",sep="\t",row.names=F,quote=F,col.names=F)
+write.table(civic_bed_mapped_sorted,file="civic.v3.bed",sep="\t",row.names=F,quote=F,col.names=F)
 
 #bgzip civic.bed
 #tabix -p bed civic.bed.gz
 
-header_lines <- c("##fileformat=VCFv4.2","##SOURCE_CIVIC=2016_10_19","##INFO=<ID=CIVIC_ID,Number=.,Type=String,Description=\"Identifier for evidence item of clinical biomarker in CiVIC database\">","#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO")
+header_lines <- c("##fileformat=VCFv4.2","##SOURCE_CIVIC=2016_12_07","##INFO=<ID=CIVIC_ID,Number=.,Type=String,Description=\"Identifier for evidence item of clinical biomarker in CiVIC database\">","#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO")
 write(header_lines,file="civic.v3.vcf",sep="\n")
 
 civic_vcf_mapped$CIVIC_ID <- paste0('CIVIC_ID=',civic_vcf_mapped$CIVIC_ID)
@@ -340,7 +343,7 @@ civic_vcf_mapped <-  dplyr::rename(civic_vcf_mapped, CHROM = chrom, POS = pos, R
 
 civic_vcf_mapped <- civic_vcf_mapped[,c("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO")]
 
-write.table(civic_vcf_mapped, file="civic_vcfcontent.tsv",sep="\t",col.names = F,quote=F, row.names = F)
+write.table(civic_vcf_mapped, file="civic_vcfcontent.v3.tsv",sep="\t",col.names = F,quote=F, row.names = F)
 
 system("cat civic_vcfcontent.tsv | tail -n +2 | egrep -v \"^[XYM]\" | sort -k1,1n -k2,2n -k4,4 -k5,5 >> civic.v3.vcf")
 system("cat civic_vcfcontent.tsv | tail -n +2 | egrep \"^[XYM]\" | sort -k1,1n -k2,2n -k4,4 -k5,5 >> civic.v3.vcf")
